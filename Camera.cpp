@@ -1,3 +1,5 @@
+#include <cmath>
+
 #include "Camera.h"
 #include "Algebra.h"
 
@@ -9,17 +11,64 @@
 
 void Camera::setUVW(const Vector &look, const Vector &up) {
     // w first, since opp look
-    w = Vector(look);
-    w.negate();
-    w.normalize();
+    wb = Vector(look);
+    wb.negate();
+    wb.normalize();
 
     // u next, cross up and w
-    u = cross(up, w);
-    u.normalize();
+    ub = cross(up, wb);
+    ub.normalize();
 
     // v last, cross  w and u (or u and look + normalize)
-    v = cross(w, u); // no need to normalize
+    vb = cross(wb, ub); // no need to normalize
 }
+
+double Camera::widthAngle() {
+    // width angle = aspect ratio * height angle
+    return GetScreenWidthRatio() * heightAngle;
+}
+
+// ----------
+// NORMALIZING
+// ----------
+
+Matrix Camera::unhingeNorm() {
+    double c = -near / far;
+    return Matrix(
+        1, 0, 0,               0,
+        0, 1, 0,               0,
+        0, 0, -1.0f / (c + 1), c / (c + 1),
+        0, 0, -1,              0
+    );
+}
+
+Matrix Camera::scaleNorm() {
+    return Matrix(
+        1.0f / (tan(widthAngle() / 2) * far), 0, 0,          0,
+        0, 1.0f / (tan(heightAngle / 2) * far),  0,          0,
+        0, 0,                                    1.0f / far, 0,
+        0, 0,                                    0,          1
+    );
+}
+
+Matrix Camera::rotateNorm() {
+    return Matrix(
+        ub[0], ub[1], ub[2], 0,
+        vb[0], vb[1], vb[2], 0,
+        wb[0], wb[1], wb[2], 0,
+        0,     0,     0,     1
+    );
+}
+
+Matrix Camera::translateNorm() {
+    return Matrix(
+        1, 0, 0, -eye[0],
+        0, 1, 0, -eye[1],
+        0, 0, 1, -eye[2],
+        0, 0, 0, 1
+    );
+}
+
 
 // ----------
 //
@@ -30,9 +79,9 @@ void Camera::setUVW(const Vector &look, const Vector &up) {
 Camera::Camera() {
     // set defaults, somewhat meaningless tho
     eye = Point(0, 0, 0);
-    u = Vector(1, 0, 0);
-    v = Vector(0, 1, 0);
-    w = Vector(0, 0, 1);
+    ub = Vector(1, 0, 0);
+    vb = Vector(0, 1, 0);
+    wb = Vector(0, 0, 1);
 
     heightAngle = 0;
     near = 0;
@@ -44,6 +93,7 @@ Camera::Camera() {
 
 Camera::~Camera() {
 }
+
 
 // ----------
 // SETTERS
@@ -90,11 +140,11 @@ Point Camera::GetEyePoint() {
 }
 
 Vector Camera::GetLookVector() {
-    return -w;
+    return -wb;
 }
 
 Vector Camera::GetUpVector() {
-    return v; // no necessarily the same as what was passed in via Orient, but
+    return vb; // no necessarily the same as what was passed in via Orient, but
               // direction is what matters
 }
 
@@ -128,7 +178,7 @@ double Camera::GetScreenWidthRatio() {
     return (double)screenWidth / (double)screenHeight;
 }
 
-// TODO
+// TODO: 4 matrices, most likely
 // project world onto film plane
 Matrix Camera::GetProjectionMatrix() {
     Matrix m;
@@ -136,7 +186,7 @@ Matrix Camera::GetProjectionMatrix() {
 }
 
 // TODO
-// position camera relative to scene
+// position camera relative to scene (or orient world relative to camera)
 Matrix Camera::GetModelViewMatrix() {
     Matrix m;
     return m;
@@ -149,26 +199,28 @@ Matrix Camera::GetModelViewMatrix() {
 
 // rotate around v, yaw
 void Camera::RotateV(double angle) {
-    Matrix rotV = rot_mat(v, angle); // mtx to rotate around v
-    u = rotV * u;
-    w = rotV * w;
+    Matrix rotV = rot_mat(vb, angle); // mtx to rotate around v
+    ub = rotV * ub;
+    wb = rotV * wb;
 }
 
 // rotate around u, pith
 void Camera::RotateU(double angle) {
-    Matrix rotU = rot_mat(u, angle); // mtx to rotate around u
-    v = rotU * v;
-    w = rotU * w;
+    Matrix rotU = rot_mat(ub, angle); // mtx to rotate around u
+    vb = rotU * vb;
+    wb = rotU * wb;
 }
 
 // rotate around w, roll
 void Camera::RotateW(double angle) {
-    Matrix rotW = rot_mat(w, angle);
-    u = rotW * u;
-    v = rotW * v;
+    Matrix rotW = rot_mat(wb, angle);
+    ub = rotW * ub;
+    vb = rotW * vb;
 }
 
 // translate eye
+// TODO: currently in world space
+//       maybe translate in camera space?
 void Camera::Translate(const Vector &dir) {
     eye  = eye + dir;
 }
@@ -176,7 +228,7 @@ void Camera::Translate(const Vector &dir) {
 // rotate u, v, w around arbitrary axis
 void Camera::Rotate(Point p, Vector axis, double degrees) {
     Matrix rot = rot_mat(p, axis, degrees);
-    u = rot * u;
-    v = rot * v;
-    w = rot * w;
+    ub = rot * ub;
+    vb = rot * vb;
+    wb = rot * wb;
 }

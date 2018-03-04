@@ -40,7 +40,7 @@ public:
 protected:
     // member vars
     Point eye;
-    Vector u, v, w;
+    Vector ub, vb, wb; // u basis, v basis, w basis
 
     double heightAngle; // view angle
     double near;
@@ -51,6 +51,11 @@ protected:
 
     // helpers
     void setUVW(const Vector &look, const Vector &up);
+    double widthAngle();
+    Matrix unhingeNorm();
+    Matrix scaleNorm();
+    Matrix rotateNorm();
+    Matrix translateNorm();
 };
 #endif
 
