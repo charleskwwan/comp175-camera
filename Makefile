@@ -1,7 +1,7 @@
 CPP = "g++"
 CPPFLAGS = -Wall -Wextra
 GLFLAGS = -lglut -lglui -lGL -lGLU
-MACFLAGS = -framework OpenGL -framework GLUT -glui
+MACFLAGS = -framework OpenGL -framework GLUT -lglui
 
 
 mac:

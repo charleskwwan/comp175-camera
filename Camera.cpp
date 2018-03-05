@@ -3,6 +3,9 @@
 #include "Camera.h"
 #include "Algebra.h"
 
+#include <iostream>
+using namespace std;
+
 // ----------
 //
 // PROTECTED
@@ -114,7 +117,7 @@ void Camera::Orient(Point& eye, Vector& look, Vector& up) {
 }
 
 void Camera::SetViewAngle (double viewAngle) {
-    heightAngle = viewAngle;
+    heightAngle = DEG_TO_RAD(viewAngle);
 }
 
 void Camera::SetNearPlane (double nearPlane) {
@@ -180,16 +183,18 @@ double Camera::GetScreenWidthRatio() {
 
 // TODO: 4 matrices, most likely
 // project world onto film plane
+
+// should return MppSuvw
 Matrix Camera::GetProjectionMatrix() {
-    Matrix m;
-    return m;
+    return unhingeNorm() * scaleNorm();
 }
 
 // TODO
 // position camera relative to scene (or orient world relative to camera)
+
+// should return Rxyz2uvw * Txyz
 Matrix Camera::GetModelViewMatrix() {
-    Matrix m;
-    return m;
+    return rotateNorm() * translateNorm();
 }
 
 
@@ -199,21 +204,21 @@ Matrix Camera::GetModelViewMatrix() {
 
 // rotate around v, yaw
 void Camera::RotateV(double angle) {
-    Matrix rotV = rot_mat(vb, angle); // mtx to rotate around v
+    Matrix rotV = rot_mat(vb, DEG_TO_RAD(angle)); // mtx to rotate around v
     ub = rotV * ub;
     wb = rotV * wb;
 }
 
 // rotate around u, pith
 void Camera::RotateU(double angle) {
-    Matrix rotU = rot_mat(ub, angle); // mtx to rotate around u
+    Matrix rotU = rot_mat(ub, DEG_TO_RAD(angle)); // mtx to rotate around u
     vb = rotU * vb;
     wb = rotU * wb;
 }
 
 // rotate around w, roll
 void Camera::RotateW(double angle) {
-    Matrix rotW = rot_mat(wb, angle);
+    Matrix rotW = rot_mat(wb, DEG_TO_RAD(angle));
     ub = rotW * ub;
     vb = rotW * vb;
 }
@@ -227,7 +232,7 @@ void Camera::Translate(const Vector &dir) {
 
 // rotate u, v, w around arbitrary axis
 void Camera::Rotate(Point p, Vector axis, double degrees) {
-    Matrix rot = rot_mat(p, axis, degrees);
+    Matrix rot = rot_mat(p, axis, DEG_TO_RAD(degrees));
     ub = rot * ub;
     vb = rot * vb;
     wb = rot * wb;
